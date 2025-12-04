@@ -1,8 +1,27 @@
 from rest_framework import generics, permissions
+from rest_framework.parsers import JSONParser
+from rest_framework.authtoken.models import Token
+
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.db import IntegrityError
+from django.contrib.auth.models import User
 
 from .serializers import TodoSerializer, TodoCompleteSerializer
 from todo.models import Todo
+
+@csrf_exempt
+def sign_up(request):
+    if request.method == 'POST':
+        try:
+            data = JSONParser().parse(request)
+            user = User.objects.create_user(data['username'], password=data['password'])
+            user.save()
+            token = Token.objects.create(user=user)
+            return JsonResponse({'token': str(token)}, status=201)
+        except IntegrityError:
+            return JsonResponse({'error':'That username has already been taken. Please choose a new username'}, status=400)
 
 class CompletedTodoListAPIView(generics.ListAPIView):
     serializer_class = TodoSerializer
